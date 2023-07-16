@@ -13,47 +13,58 @@ from digitalio import DigitalInOut, Direction, Pull
 
 class Buttons:
 
-    def __init__(self):
-        # initialize buttons and LED
-        # buttons go True when pressed
-        self.a = DigitalInOut(board.SW_A)
-        self.a.direction = Direction.INPUT
-        self.a.pull = Pull.DOWN
-        self.b = DigitalInOut(board.SW_B)
-        self.b.direction = Direction.INPUT
-        self.b.pull = Pull.DOWN
-        self.c = DigitalInOut(board.SW_C)
-        self.c.direction = Direction.INPUT
-        self.c.pull = Pull.DOWN
-        self.up = DigitalInOut(board.SW_UP)
-        self.up.direction = Direction.INPUT
-        self.up.pull = Pull.DOWN
-        self.down = DigitalInOut(board.SW_DOWN)
-        self.down.direction = Direction.INPUT
-        self.down.pull = Pull.DOWN
-        self.user = board.USER_SW
+    def __init__(self, button_pins=None):
+        # Define the buttons we're using here, which will be assigned an index based on the order they're in the array
+        if button_pins is None:
+            self.button_pins = [("a", board.SW_A), ("b", board.SW_B), ("c", board.SW_C),
+                                ("up", board.SW_UP), ("down", board.SW_DOWN)]
+        else:
+            self.button_pins = button_pins
+
+        # USER_SW only present on Badger2040, not Badger2040 W
+
+        if board.board_id == "pimoroni_badger2040":
+            self.button_pins.append(("user", board.USER_SW))
+
+        # dynamically set all of our buttons attributes
+        self.button_list = []
+        for idx, (button_id, pin) in enumerate(self.button_pins):
+            btn = DigitalInOut(pin)
+            btn.direction = Direction.INPUT
+            btn.pull = Pull.DOWN
+            setattr(self, button_id, btn)
+            self.button_list.append({"btn": btn, "id": button_id, "idx": idx, "pin":pin})
+
+        #setup our USER LED
         self.led = DigitalInOut(board.USER_LED)
         self.led.direction = Direction.OUTPUT
+
+        print(self.led.value)
+
+    def set_led(self,state=False):
+        self.led.value = state
 
     # wait for button click and return index of button (0,1,2 for a,b,c; 4,5 for up,down)
     def await_click(self):
         clicked = False
-        self.led.value = 0   # awaiting click; activity LED off
+        self.set_led()  # awaiting click; activity LED off
         while not clicked:
             bs = self.states()
             clicked = any(bs)
             # prevent spinning    TODO: sleep mode to save energy?
             time.sleep(0.01)
-        return bs.index(True)
+        return self.button_list[bs.index(True)]
 
     # state of all buttons [a,b,c,up,down]
     def states(self):
-        states = [self.a.value, self.b.value, self.c.value, self.up.value, self.down.value]
-        return states
+        return [b["btn"].value for b in self.button_list]
+
+    def pins(self):
+        return [b["pin"] for b in self.button_list]
 
     # index of clicked button
     def states_index(self):
         bs = self.states()
-        return bs.index(True) if True in bs else -1
+        return self.button_list[bs.index(True)] if True in bs else -1
 
 

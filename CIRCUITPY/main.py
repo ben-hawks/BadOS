@@ -16,7 +16,7 @@ from adafruit_display_shapes.polygon import Polygon
 from adafruit_display_shapes.rect import Rect
 from adafruit_display_shapes.roundrect import RoundRect
 from adafruit_display_shapes.triangle import Triangle
-from adafruit_hid.keyboard import Keyboard
+#from adafruit_hid.keyboard import Keyboard
 import adafruit_miniqr
 import adafruit_ducky
 import adafruit_imageload
@@ -24,6 +24,17 @@ import adafruit_imageload
 from BadOS_Screen import Screen
 from BadOS_Buttons import Buttons
 from BadOS_Menu import Menu
+
+try: #try importing RTC
+    import pcf85063a
+
+except:
+    pass
+
+try:
+    import cyw43, socketpool, ssl
+except:
+    pass
 
 # constants
 WHITE = 0xFFFFFF
@@ -77,21 +88,22 @@ def page_select(p):
 
 
 #   m a i n   s e c t i o n
+board.ENABLE_DIO.value = True
 
 # disable autoreload
-supervisor.disable_autoreload()
+supervisor.runtime.autoreload = True
 
 # variables
 menu_page = 0
 
 # buttons and LED 
 buttons = Buttons()
-buttons.led.value = 1   # led on during start-up
+buttons.set_led(True) # led on during start-up
 
 # check for HID request on restart (any A,B,C pressed)
-if buttons.a.value or buttons.b.value or buttons.c.value:
+#if buttons.a.value or buttons.b.value or buttons.c.value:
     # TODO: invoke HID app for the specified button
-    pass
+#    pass
 
 # initialize display
 display = board.DISPLAY

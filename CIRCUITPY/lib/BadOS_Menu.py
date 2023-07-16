@@ -96,7 +96,7 @@ class Menu:
         for i in range(groupcount, len(self.screen.value)):
             self.screen.value.pop()
         # await response
-        ix = self.buttons.await_click()
+        ix = self.buttons.await_click()["idx"]
         self.buttons.led.value = 1  # turn on LED
         return ix
 

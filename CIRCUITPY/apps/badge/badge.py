@@ -223,12 +223,10 @@ def show_badge(badgename, badge_data):
         display.refresh()
         # remove image for possible replacement
         badge.pop()
-        # shut off activity LED
-        buttons.LED = 0
         # wait for keypress to dismiss or swap photo/QR code
-        button_index = buttons.await_click()
+        button_index = buttons.await_click()["idx"]
         # turn on activity LED
-        buttons.LED = 1
+        buttons.set_led(True)
         # wait for button release
         while buttons.states_index() != -1:
             time.sleep(0.05)
@@ -271,7 +269,7 @@ def menu_select(n):
         if badgename == 'exit':
             # exit requested
             # turn on activity LED
-            buttons.LED = 1
+            buttons.set_led(True)
             # return to the main menu
             supervisor.reload()
         else:
@@ -296,7 +294,7 @@ showqr=False
 
 # buttons and LED 
 buttons = Buttons()
-buttons.led.value = 1   # led on during start-up
+buttons.set_led(True)  # led on during start-up
 
 # initialize display
 display = board.DISPLAY

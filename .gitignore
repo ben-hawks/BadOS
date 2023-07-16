@@ -1,0 +1,93 @@
+# SPDX-FileCopyrightText: 2014 MicroPython & CircuitPython contributors (https://github.com/adafruit/circuitpython/graphs/contributors)
+#
+# SPDX-License-Identifier: MIT
+
+# Compiled Sources
+###################
+*.o
+*.a
+!atmel-samd/asf/**/*.a
+*.elf
+*.bin
+!*.toml.bin
+*.map
+*.hex
+*.dis
+*.exe
+
+# Packages
+############
+dist/
+*.egg-info
+.eggs
+
+# Logs and Databases
+######################
+*.log
+
+# VIM Swap Files
+######################
+*.swp
+
+# Build directories
+######################
+build/
+bin/
+circuitpython-stubs/
+test-stubs/
+build-*/
+
+# Test failure outputs
+######################
+tests/results/*
+
+# Python cache files
+######################
+__pycache__/
+*.pyc
+
+# Customized Makefile/project overrides
+######################
+GNUmakefile
+user.props
+
+# Sphinx output
+###############
+_build
+
+# Generated rst files
+######################
+genrst/
+/autoapi/
+/shared-bindings/*/**/*.rst
+
+# ctags and similar
+###################
+TAGS
+
+# Merge leftovers
+#################
+*.orig
+
+# Emacs backup files
+####################
+*~
+
+*.DS_Store
+**/*.DS_Store
+*.icloud
+
+# POEdit mo files
+####################
+*.mo
+
+.vscode
+.idea
+
+# Python Virtual Environments
+####################
+.venv
+.env
+
+# Uncrustify formatting
+*.uncrustify

@@ -25,8 +25,8 @@ import adafruit_imageload
 
 WHITE = 0xFFFFFF
 BLACK = 0x000000
-MAX_BATTERY_VOLTAGE = 400
-MIN_BATTERY_VOLTAGE = 320
+MAX_BATTERY_VOLTAGE = 300
+MIN_BATTERY_VOLTAGE = 270
 ICONS_DIR = '/assets/icons/'
 IMAGES_DIR = '/assets/images/'
 FONTS_DIR = '/assets/fonts/'
@@ -128,8 +128,8 @@ class Status_Bar:
     def __init__(self, display):
         self.display = display
         self.settings = Settings()
-        vref_en = analogio.AnalogIn(board.VREF_POWER)
-        self.battery_sense = analogio.AnalogIn(board.VBAT_SENSE)   
+#        vref_en = analogio.AnalogIn(board.VOLTAGE_MONITOR)
+        self.battery_sense = analogio.AnalogIn(board.VOLTAGE_MONITOR)
     
     # determine the number of bars representing the logic supply voltage
     @staticmethod
@@ -164,18 +164,22 @@ class Status_Bar:
         return bat_level_group
 
     def usb_available(self):
-        try:
-            keyboard = Keyboard(usb_hid.devices)
-            usb = True
-        except:
-            usb = False
-        return usb
+        return supervisor.runtime.usb_connected
+
+    def serial_available(self):
+        return supervisor.runtime.serial_connected
 
     def usb_connected_icon(self):
         if self.usb_available():
-            image, palette = adafruit_imageload.load(ICONS_DIR + 'usb.bmp', bitmap=displayio.Bitmap, palette=displayio.Palette)        
+            if self.serial_available():
+                image, palette = adafruit_imageload.load(ICONS_DIR + 'usb_serial.bmp', bitmap=displayio.Bitmap,
+                                                         palette=displayio.Palette)
+            else:
+                image, palette = adafruit_imageload.load(ICONS_DIR + 'usb_ns.bmp', bitmap=displayio.Bitmap,
+                                                         palette=displayio.Palette)
         else:
-            image, palette = adafruit_imageload.load(ICONS_DIR + 'blank.bmp', bitmap=displayio.Bitmap, palette=displayio.Palette) 
+            image, palette = adafruit_imageload.load(ICONS_DIR + 'blank.bmp', bitmap=displayio.Bitmap,
+                                                     palette=displayio.Palette)
         tile_grid = displayio.TileGrid(image, pixel_shader=palette)
         return tile_grid
 
@@ -207,7 +211,7 @@ class Status_Bar:
         bar = displayio.Group()
         background = Rect(0, 0, self.display.width, 16, fill=BLACK, outline=BLACK)
         # title
-        title = label.Label(font=terminalio.FONT, text='BadOS CPython', color=WHITE, scale=1)
+        title = label.Label(font=terminalio.FONT, text='AIV @ DC31', color=WHITE, scale=1)
         title.x, title.y = 3, 7
         # storage usage
         stg = self.create_storage_usage(85)
@@ -244,16 +248,19 @@ class Settings:
     
     @staticmethod
     def keyboard_layout(language):
-        keyboard = Keyboard(usb_hid.devices)
-        if language == 'fr':
-            # France
-            from adafruit_hid.keyboard_layout_fr import KeyboardLayoutFR
-            layout = KeyboardLayoutFR(keyboard) 
-        else:
-            # USA
-            from adafruit_hid.keyboard_layout_us import KeyboardLayoutUS
-            layout = KeyboardLayoutUS(keyboard)
-        return layout
+        try:
+            keyboard = Keyboard(usb_hid.devices)
+            if language == 'fr':
+                # France
+                from adafruit_hid.keyboard_layout_fr import KeyboardLayoutFR
+                layout = KeyboardLayoutFR(keyboard)
+            else:
+                # USA
+                from adafruit_hid.keyboard_layout_us import KeyboardLayoutUS
+                layout = KeyboardLayoutUS(keyboard)
+            return layout
+        except:
+            return None
 
 
 class Progress_Indicator:
