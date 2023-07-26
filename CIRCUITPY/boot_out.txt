@@ -1,0 +1,4 @@
+Adafruit CircuitPython 8.2.0 on 2023-07-05; Pimoroni Badger 2040 W with rp2040
+Board ID:pimoroni_badger2040w
+UID:E661410403373522
+MAC:28:CD:C1:0A:D3:CB

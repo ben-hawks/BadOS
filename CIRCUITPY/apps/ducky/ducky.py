@@ -183,9 +183,10 @@ menu = Menu(display, ducky_screen, buttons, scripts_list, ducky_screen.fonts[0],
 7. duck_main.py sets USB Device Descriptor, manu, product, etc. to a keyboard
 8. loop trying to open a USB_HID connection, waiting for user to plug in USB 
 9. once USB is plugged in, have present a "Run" "Stop" and "Exit" option 
-10. run script when RUN pressed
+10. run script when RUN pressed (calls apps/ducky/... functions) 
 11. stop when STOP pressed twice rapidly, change option to "Run" "Restart" "Exit" 
-12. when EXIT pressed three times rapidly (while running or stopped) or once (once done or before running), reboot board
+12. when "restart" pressed, start from the top of the script, "run" continues from where left off
+13. when EXIT pressed three times rapidly (while running or stopped) or once (once done or before running), reboot board
 
 '''
 

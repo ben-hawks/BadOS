@@ -144,25 +144,3 @@ while True:
     elif ix < 5:
         # up, down
         page_select(-1 if ix == 3 else 1)
-
-
-
-
-'''
-
-IMAGE_WIDTH = 104
-IMAGE_HEIGHT = 128
-
-# scan files for pictures files
-files = os.listdir("/images/")
-picfiles = []
-count = 0
-for n in files:
-    if n[-4:]==".bmp":
-        if n[0:2]!="._":
-            picfiles.append((n.replace(".bmp",""),count))
-            count=count+1        
-picfiles.append(("EXIT",count))
-
-'''
-

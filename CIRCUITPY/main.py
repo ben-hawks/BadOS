@@ -4,9 +4,9 @@
     Inspired by the Pimoroni Badger2040 badge, AdaFruit and BeBox
 '''
 
-import gc, os, sys, math, time
+import gc, os, sys, math, time, builtins
 import board, microcontroller, storage, supervisor
-import analogio, digitalio, busio, displayio , terminalio , vectorio, usb_hid
+import analogio, digitalio, busio, displayio , terminalio , vectorio, usb_hid, simpleio
 from digitalio import DigitalInOut, Direction, Pull
 from adafruit_bitmap_font import bitmap_font
 from adafruit_display_text import label
@@ -35,6 +35,13 @@ try:
     import cyw43, socketpool, ssl
 except:
     pass
+
+
+# Import some board specific configuration
+config_file = "/config/" + board.board_id.replace(".", "_")
+hw_impl = builtins.__import__(config_file, None, None, ["config"], 0)
+
+from configuration import settings, ui, pins
 
 # constants
 WHITE = 0xFFFFFF
@@ -88,9 +95,8 @@ def page_select(p):
 
 
 #   m a i n   s e c t i o n
-board.ENABLE_DIO.value = True
 
-# disable autoreload
+# disable autoreload - only useful during development, restarts board when files on CIRCUITPY mount are changed
 supervisor.runtime.autoreload = True
 
 # variables
