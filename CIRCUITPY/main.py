@@ -25,32 +25,20 @@ from BadOS_Screen import Screen
 from BadOS_Buttons import Buttons
 from BadOS_Menu import Menu
 
-try: #try importing RTC
-    import pcf85063a
-
-except:
-    pass
-
-try:
-    import cyw43, socketpool, ssl
-except:
-    pass
-
 
 # Import some board specific configuration
+import configuration
+
 config_file = "/config/" + board.board_id.replace(".", "_")
 hw_impl = builtins.__import__(config_file, None, None, ["config"], 0)
 
 from configuration import settings, ui, pins
 
-# constants
-WHITE = 0xFFFFFF
-BLACK = 0x000000
+settings.hw = hw_impl.config
 
-APPS_DIR = '/apps/'
-ICONS_DIR = '/assets/icons/'
-IMAGES_DIR = '/assets/images/'
-FONTS_DIR = '/assets/fonts/'
+# constants
+WHITE = ui.bg_color
+BLACK = ui.fg_color
 
 def read_le(s):
     # as of this writting, int.from_bytes does not have LE support, DIY!
@@ -65,14 +53,11 @@ def read_le(s):
 def get_app_list():
     app_list = []
     # get app information from app directories; names and icon bitmaps
-    ListFiles = os.listdir(APPS_DIR)
-    for appname in ListFiles:
-        #d = os.path.join(rootdir, app)
-        #if os.path.isdir(d):
-        if appname[0:1] != ".":
-            app_list.append((appname, APPS_DIR + appname + '/' + appname + '.bmp'))
-    # sort alphabetically
+
+    for i in settings.path["apps"]:
+        app_list += [[app, i + app + '/' + app + '.bmp', i + app + '/' + app + '.py'] for app in os.listdir(i) if app[0:1] != "."]
     app_list.sort()
+    print(app_list)
     return app_list 
 
 # menu selection handler
@@ -80,10 +65,9 @@ def menu_select(n):
     # invoke the selected app
     ix = menu_page * 3 + n
     if ix < len(app_list):
-        appname = app_list[ix][0]
-        appnamepath = APPS_DIR + appname + '/' + appname + '.py'
-        #exec(open(appnamepath).read())
-        supervisor.set_next_code_file(appnamepath)
+        #appname = app_list[ix][0]
+        app_path = app_list[ix][2]
+        supervisor.set_next_code_file(app_path)
         supervisor.reload()
 
 # page selecton handler
@@ -99,35 +83,23 @@ def page_select(p):
 # disable autoreload - only useful during development, restarts board when files on CIRCUITPY mount are changed
 supervisor.runtime.autoreload = True
 
-# variables
-menu_page = 0
-
-# buttons and LED 
-buttons = Buttons()
-buttons.set_led(True) # led on during start-up
-
 # check for HID request on restart (any A,B,C pressed)
 #if buttons.a.value or buttons.b.value or buttons.c.value:
     # TODO: invoke HID app for the specified button
 #    pass
 
-# initialize display
-display = board.DISPLAY
-display.rotation = 270
-palette = displayio.Palette(1)
-palette[0] = WHITE
-palette_inverted = displayio.Palette(1)
-palette_inverted[0] = BLACK
-WIDTH = display.width
-HEIGHT = display.height
-
-# create screen
+# create OS screen
 screen = Screen()
 
+# buttons and LED
+buttons = Buttons()
+buttons.set_led(True) # led on during start-up
+
 # get list of apps for menu and create menu object
+menu_page = 0
 app_list = get_app_list()
 #print(app_list)
-menu = Menu(display, screen, buttons, app_list, screen.fonts[0], ICONS_DIR + 'file' + '.bmp')
+menu = Menu(settings.hw.display, screen, buttons, app_list, screen.fonts[0], settings.path["icons"][0] + 'file' + '.bmp')
 
 # main loop root 
 while True:

@@ -1,5 +1,5 @@
 # ----------------------------------------------------------------------------
-# sao_lib.py: simple wrapper for SAO ports on a badge
+# sao_lib.py: simple circuitpython wrapper for SAO ports on a badge
 #
 #
 # Author: Ben Hawks
@@ -15,15 +15,16 @@ class SAO_port():
     self.i2c_bus = i2c
     self.gpio1 = gpio1
     self.gpio2 = gpio2
-    self.device_i2c = None
-    self.device_gpio = None
+    self.i2c = None
+    self.gpio = None
 
   def set_i2c_device(self, address):
-    self.device = I2CDevice(self.i2c_bus, address)
+    self.i2c = I2CDevice(self.i2c_bus, address)
 
   def set_gpio_device(self, gpio_device):
+    # allows for easy saving/setting up of various uses for SAO GPIOs
     # assume if GPIO's aren't set, they aren't supported (either old SAO version, or other HW reasons)
     if self.gpio1 is not None and self.gpio2 is not None:
-      self.device_gpio = gpio_device
+      self.gpio = gpio_device
     else:
-      raise ConnectionError("No GPIO pins connected to this SAO port!") # I mean, the GPIOs aren't connected
+      raise ConnectionError("No GPIO pins connected to this SAO port!") # I mean, the GPIOs aren't connected...

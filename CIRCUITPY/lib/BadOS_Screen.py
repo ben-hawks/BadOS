@@ -7,7 +7,7 @@
 __version__ = "1.0.0"
 __repo__ = "https://github.com/guidoslabs/BadOS.git"
 
-import gc, os, sys, math, time
+import gc, os, sys, math, time, builtins
 import board, microcontroller, storage, supervisor
 import analogio, digitalio, busio, displayio , terminalio , vectorio, usb_hid
 from digitalio import DigitalInOut, Direction, Pull
@@ -23,36 +23,24 @@ from adafruit_hid.keyboard import Keyboard
 import adafruit_miniqr
 import adafruit_imageload
 
-WHITE = 0xFFFFFF
-BLACK = 0x000000
-MAX_BATTERY_VOLTAGE = 300
-MIN_BATTERY_VOLTAGE = 270
-ICONS_DIR = '/assets/icons/'
-IMAGES_DIR = '/assets/images/'
-FONTS_DIR = '/assets/fonts/'
+
+config_file = "/config/" + board.board_id.replace(".", "_")
+hw_impl = builtins.__import__(config_file, None, None, ["config"], 0)
+
+from configuration import settings, ui, pins
 
 class Screen:
 
-    # constants
-    display = board.DISPLAY
-    display.rotation = 270
-    palette = displayio.Palette(1)
-    palette[0] = WHITE
-    palette_inverted = displayio.Palette(1)
-    palette_inverted[0] = BLACK
-    WIDTH = display.width
-    HEIGHT = display.height
-    FONTS_DIR = '/assets/fonts/'
+    def __init__(self, background_color = ui.white, with_status_bar = True):
 
-    def __init__(self, background_color = WHITE, with_status_bar = True):
-        # get fonts
-        font = bitmap_font.load_font(self.FONTS_DIR + 'Arial-12.bdf')
-        font2 = bitmap_font.load_font(self.FONTS_DIR + 'Earth 2073-18.bdf')
-        font3=terminalio.FONT
-        self.fonts = [font, font2, font3]
+        self.fonts = []
+        self.get_fonts()
+        
+        self.width = settings.hw.display.width
+        self.height = settings.hw.display.height
         self.background_color = background_color
-        self.background_palette = self.palette_inverted if background_color == BLACK else self.palette
-        self.status_bar = Status_Bar(self.display)
+        self.background_palette = settings.hw.palette_inverted if background_color == ui.black else settings.hw.palette
+        self.status_bar = Status_Bar(settings.hw.display)
         self.value = self.create_screen()
         self._status_bar_visible = with_status_bar
         if not with_status_bar:
@@ -79,7 +67,7 @@ class Screen:
     # create and layout display screen
     def create_screen(self):
         screen = displayio.Group()
-        background = vectorio.Rectangle(pixel_shader=self.background_palette, width=self.WIDTH + 1, height=self.HEIGHT, x=0, y=0)
+        background = vectorio.Rectangle(pixel_shader=self.background_palette, width=self.width + 1, height=self.height, x=0, y=0)
         screen.append(background)
         screen.append(self.status_bar.value)
         return screen
@@ -121,13 +109,20 @@ class Screen:
                 thumbnail_image[x, y] = bitmap_image[xi, yi]
         return thumbnail_image, bitmap_palette
 
+    def get_fonts(self):
+        # get fonts
+        self.fonts.append(bitmap_font.load_font(settings.path["fonts"][0] + 'Arial-12.bdf'))
+        self.fonts.append(bitmap_font.load_font(settings.path["fonts"][0] + 'Earth 2073-18.bdf'))
+        self.fonts.append(terminalio.FONT)
 
+        if settings.hw.sd_mounted:
+            sd_fonts = [font for font in sorted(os.listdir(settings.path["fonts"][1])) if font[0:1] != "."]
 
 class Status_Bar:
     
     def __init__(self, display):
         self.display = display
-        self.settings = Settings()
+        self.settings = HID_Settings()
 #        vref_en = analogio.AnalogIn(board.VOLTAGE_MONITOR)
         self.battery_sense = analogio.AnalogIn(board.VOLTAGE_MONITOR)
     
@@ -136,7 +131,7 @@ class Status_Bar:
     def battery_level(battery_voltage):
         vbat=int((battery_voltage / 100) + 140)
         range_map = lambda input, in_min, in_max, out_min, out_max: (((input - in_min) * (out_max - out_min)) / (in_max - in_min)) + out_min
-        return int(range_map(vbat, MIN_BATTERY_VOLTAGE, MAX_BATTERY_VOLTAGE, 0, 4))
+        return int(range_map(vbat, settings.min_battery, settings.max_battery, 0, 4))
 
     # create the battery level icon and text
     def create_battery_level(self, x, y):
@@ -144,23 +139,23 @@ class Status_Bar:
         battery_voltage = self.battery_sense.value
         # show voltage value
         bat_level_group = displayio.Group()
-        batvolt = label.Label(font=terminalio.FONT, text=str('{:.2f}v'.format((battery_voltage/10000)+1)), color=WHITE, scale=1)
+        batvolt = label.Label(font=terminalio.FONT, text=str('{:.2f}v'.format((battery_voltage/10000)+1)), color=ui.white, scale=1)
         batvolt.x, batvolt.y = 235, 7
         bat_level_group.append(batvolt)
         # show battery icon
-        bat_level_group.append(Rect(x, y, 19, 10, fill=WHITE, outline=WHITE))
-        bat_level_group.append(Rect(x + 19, y + 3, 2, 4, fill=WHITE, outline=WHITE))
-        bat_level_group.append(Rect(x + 1, y + 1, 17, 8, fill=BLACK, outline=BLACK))
+        bat_level_group.append(Rect(x, y, 19, 10, fill=ui.white, outline=ui.white))
+        bat_level_group.append(Rect(x + 19, y + 3, 2, 4, fill=ui.white, outline=ui.white))
+        bat_level_group.append(Rect(x + 1, y + 1, 17, 8, fill=ui.black, outline=ui.black))
         if self.battery_level(battery_voltage) < 1:
-            bat_level_group.append(Line(x + 3, y, x + 3 + 10, y + 10, BLACK))
-            bat_level_group.append(Line(x + 3 + 1, y, x + 3 + 11, y + 10, BLACK))
-            bat_level_group.append(Line(x + 2 + 2, y - 1, x + 4 + 12, y + 11, WHITE))
-            bat_level_group.append(Line(x + 2 + 3, y - 1, x + 4 + 13, y + 11, WHITE))
+            bat_level_group.append(Line(x + 3, y, x + 3 + 10, y + 10, ui.black))
+            bat_level_group.append(Line(x + 3 + 1, y, x + 3 + 11, y + 10, ui.black))
+            bat_level_group.append(Line(x + 2 + 2, y - 1, x + 4 + 12, y + 11, ui.white))
+            bat_level_group.append(Line(x + 2 + 3, y - 1, x + 4 + 13, y + 11, ui.white))
         else:
             # show battery bars
             for i in range(4):
                 if self.battery_level(battery_voltage) / 4 > (1.0 * i) / 4:
-                    bat_level_group.append(Rect(i * 4 + x + 2, y + 2, 3, 6, fill=WHITE, outline=WHITE))
+                    bat_level_group.append(Rect(i * 4 + x + 2, y + 2, 3, 6, fill=ui.white, outline=ui.white))
         return bat_level_group
 
     def usb_available(self):
@@ -172,13 +167,13 @@ class Status_Bar:
     def usb_connected_icon(self):
         if self.usb_available():
             if self.serial_available():
-                image, palette = adafruit_imageload.load(ICONS_DIR + 'usb_serial.bmp', bitmap=displayio.Bitmap,
+                image, palette = adafruit_imageload.load(settings.path['icons'][0] + 'usb_serial.bmp', bitmap=displayio.Bitmap,
                                                          palette=displayio.Palette)
             else:
-                image, palette = adafruit_imageload.load(ICONS_DIR + 'usb_ns.bmp', bitmap=displayio.Bitmap,
+                image, palette = adafruit_imageload.load(settings.path['icons'][0] + 'usb_ns.bmp', bitmap=displayio.Bitmap,
                                                          palette=displayio.Palette)
         else:
-            image, palette = adafruit_imageload.load(ICONS_DIR + 'blank.bmp', bitmap=displayio.Bitmap,
+            image, palette = adafruit_imageload.load(settings.path['icons'][0] + 'blank.bmp', bitmap=displayio.Bitmap,
                                                      palette=displayio.Palette)
         tile_grid = displayio.TileGrid(image, pixel_shader=palette)
         return tile_grid
@@ -194,10 +189,10 @@ class Status_Bar:
         f_total_used = f_total_size - f_total_free
         f_used = 100 / f_total_size * f_total_used
         # f_free = 100 / f_total_size * f_total_free
-        batbg = Rect(x + 10, 3, 80, 10, fill=BLACK, outline=WHITE)
-        batlvl1 = Rect(x + 11, 4, 78, 8, fill=BLACK, outline=BLACK)
-        batlvl2 = Rect(x + 12, 5, int(76 / 100.0 * f_used), 6, fill=WHITE, outline=WHITE)
-        battxt = label.Label(font=terminalio.FONT, text='{:.0f}%'.format(f_used), color=WHITE, scale=1)
+        batbg = Rect(x + 10, 3, 80, 10, fill=ui.black, outline=ui.white)
+        batlvl1 = Rect(x + 11, 4, 78, 8, fill=ui.black, outline=ui.black)
+        batlvl2 = Rect(x + 12, 5, int(76 / 100.0 * f_used), 6, fill=ui.white, outline=ui.white)
+        battxt = label.Label(font=terminalio.FONT, text='{:.0f}%'.format(f_used), color=ui.white, scale=1)
         battxt.x, battxt.y = x + 92, 7
         storage_usage.append(batbg)
         storage_usage.append(batlvl1)
@@ -209,16 +204,16 @@ class Status_Bar:
     def value(self):
         # init and set black background
         bar = displayio.Group()
-        background = Rect(0, 0, self.display.width, 16, fill=BLACK, outline=BLACK)
+        background = Rect(0, 0, self.display.width, 16, fill=ui.black, outline=ui.black)
         # title
-        title = label.Label(font=terminalio.FONT, text='AIV @ DC31', color=WHITE, scale=1)
+        title = label.Label(font=terminalio.FONT, text='AIV @ DC31', color=ui.white, scale=1)
         title.x, title.y = 3, 7
         # storage usage
         stg = self.create_storage_usage(85)
         # battery
         battery = self.create_battery_level(self.display.width - 22 - 3, 3)
         # country/language
-        llang = label.Label(font=terminalio.FONT, text=self.settings.language.upper(), color=WHITE, scale=1)
+        llang = label.Label(font=terminalio.FONT, text=self.settings.language.upper(), color=ui.white, scale=1)
         llang.x, llang.y = 202, 7
         # usb icon
         usb_icon = self.usb_connected_icon()
@@ -233,7 +228,7 @@ class Status_Bar:
         return bar
 
 
-class Settings:
+class HID_Settings:
     def __init__(self):
         self.language = self.keyboard_language()
         self.layout = self.keyboard_layout(self.language)
@@ -265,18 +260,19 @@ class Settings:
 
 class Progress_Indicator:
 
-    def __init__(self, x, y, width, height, text_scale):
+    def __init__(self, x, y, width, height, text_scale, bar_font=terminalio.FONT):
         self.x, self.y, self.width, self.height, self.text_scale = x, y, width, height, text_scale
+        self.bar_font = bar_font
 
     def bar(self, percent_complete):
         bar = displayio.Group()
         print(self.x, self.y, self.width, self.height)
-        bar_background = Rect(self.x, self.y, self.width, self.height, fill=BLACK, outline=WHITE)
+        bar_background = Rect(self.x, self.y, self.width, self.height, fill=ui.black, outline=ui.white)
         print(self.x + 1, self.y + 1, self.width - 2, self.height - 2)
-        bar_frame = Rect(self.x + 1, self.y + 1, self.width - 2, self.height - 2, fill=BLACK, outline=BLACK)
+        bar_frame = Rect(self.x + 1, self.y + 1, self.width - 2, self.height - 2, fill=ui.black, outline=ui.black)
         print(self.x + 3, self.y + 3, int((self.width - 6) / 100.0 * percent_complete), self.height - 6)
-        bar_progress = Rect(self.x + 3, self.y + 3, int((self.width - 6) / 100.0 * percent_complete + 1), self.height - 6, fill=WHITE, outline=WHITE)
-        bar_text = label.Label(font=terminalio.FONT, text='{:.0f}%'.format(percent_complete), color=BLACK, scale=self.text_scale)
+        bar_progress = Rect(self.x + 3, self.y + 3, int((self.width - 6) / 100.0 * percent_complete + 1), self.height - 6, fill=ui.white, outline=ui.white)
+        bar_text = label.Label(font=self.bar_font, text='{:.0f}%'.format(percent_complete), color=ui.black, scale=self.text_scale)
         bar_text.x, bar_text.y = self.x + self.width + 2, self.y + 8
         bar.append(bar_background)
         bar.append(bar_frame)
