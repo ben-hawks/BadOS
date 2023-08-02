@@ -96,6 +96,10 @@ else:
 pins.PIN_ALARM = board.SW_A                     # wakeup pin
 pins.RTC_ALARM = board.RTC_ALARM                # rtc wakup pin
 
+pins.button_pins = [("a", board.SW_A), ("b", board.SW_B), ("c", board.SW_C),
+                                ("up", board.SW_UP), ("down", board.SW_DOWN)]
+
+
 if use_SD_card:
   pins.SD_CS = board.GP1
   pins.SD_CD = board.GP0
@@ -106,3 +110,4 @@ ui.black = 0x000000
 ui.bg_color  = ui.white                         # white
 ui.fg_color  = ui.black                         # black
 ui.date_fmt  = "{0:02d}.{1:02d}.{2:02d}"        # dd.mm.yy
+ui.button_pos = (42, 145, 251)

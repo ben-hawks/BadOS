@@ -6,7 +6,7 @@
 __version__ = "1.0.0"
 __repo__ = "https://github.com/guidoslabs/BadOS.git"
 
-import time
+import time, builtins, board
 import displayio
 import adafruit_imageload
 from adafruit_display_text import label
@@ -14,10 +14,10 @@ from adafruit_display_shapes.rect import Rect
 
 from BadOS_Buttons import Buttons
 
-# constants
-WHITE = 0xFFFFFF
-BLACK = 0x000000
-BUTTON_CENTER_POSITIONS = (42, 145, 251) # center x positions on screen for bottom buttons
+config_file = "/config/" + board.board_id.replace(".", "_")
+hw_impl = builtins.__import__(config_file, None, None, ["config"], 0)
+
+from configuration import settings, ui, pins
 
 class Menu:
 
@@ -34,13 +34,13 @@ class Menu:
     def menu_line(self, pagenum):
         menu_line = displayio.Group()
         number_of_items = len(self.items)
-        items_per_line = len(BUTTON_CENTER_POSITIONS)
+        items_per_line = len(ui.button_pos)
         number_of_pages = (number_of_items - 1) // items_per_line + 1
         for i in range(items_per_line):
             # create line of icons
             ix = pagenum * 3 + i
             if ix < number_of_items:
-                x = BUTTON_CENTER_POSITIONS[i]
+                x = ui.button_pos[i]
                 appname = self.items[ix][0]
                 try:
                     image, palette = adafruit_imageload.load(self.items[ix][1], bitmap=displayio.Bitmap, palette=displayio.Palette)
@@ -58,7 +58,7 @@ class Menu:
                 tile_grid = displayio.TileGrid(image, pixel_shader=palette)
                 tile_grid.x, tile_grid.y = int(x - 32 + (64 - image.width) / 2), 24   # x - (tile_grid.get_width() // 2)  # 32
                 menu_line.append(tile_grid)
-                icon = label.Label(self.font, text=self.items[ix][0][0:6].upper(), color=BLACK, scale=1)
+                icon = label.Label(self.font, text=self.items[ix][0][0:6].upper(), color=ui.black, scale=1)
                 icon_width = 50  # make dynamic using real width?
                 icon.x, icon.y =  x - int(icon_width / 2) + (0 if len(icon.text) > 4 else 10), 16 + 90 + 2
                 menu_line.append(icon)
@@ -70,9 +70,9 @@ class Menu:
                 y = (self.display.height - status_bar_height) // 2 - (number_of_pages * (ind_size + 2) // 2) + 10
                 for i in range(number_of_pages):
                     if i == pagenum:
-                        page_ind = Rect(x, y + (i * (ind_size + 2)), ind_size, ind_size, fill=BLACK, outline=BLACK)
+                        page_ind = Rect(x, y + (i * (ind_size + 2)), ind_size, ind_size, fill=ui.black, outline=ui.black)
                     else:
-                        page_ind = Rect(x, y + (i * (ind_size + 2)), ind_size, ind_size, fill=WHITE, outline=BLACK)
+                        page_ind = Rect(x, y + (i * (ind_size + 2)), ind_size, ind_size, fill=ui.white, outline=ui.black)
                     menu_line.append(page_ind)
         return menu_line
 

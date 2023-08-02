@@ -4,7 +4,7 @@
     David Guidos, May 2022
 '''
 
-import gc, os, sys, math, time
+import gc, os, sys, math, time, builtins
 import board, microcontroller, storage, supervisor
 import analogio, digitalio, busio, displayio , terminalio , vectorio
 from digitalio import DigitalInOut, Direction, Pull
@@ -24,13 +24,16 @@ from BadOS_Buttons import Buttons
 from BadOS_Screen import Screen, Status_Bar
 from BadOS_Menu import Menu
 
+config_file = "/config/" + board.board_id.replace(".", "_")
+hw_impl = builtins.__import__(config_file, None, None, ["config"], 0)
+
+from configuration import settings, ui, pins
+
 # constants
-WHITE = 0xFFFFFF
-BLACK = 0x000000
+ui.white = 0xFFFFFF
+ui.black = 0x000000
 BADGES_DIR = '/apps/badge/'
-ICONS_DIR = '/assets/icons/'
-IMAGES_DIR = '/assets/images/'
-FONTS_DIR = '/assets/fonts/'
+
 
 # generate QR code bitmap
 # usage example:
@@ -56,8 +59,8 @@ def create_qr_bitmap(code_bytes):
 def show_qr_bitmap(qr_bitmap, x_pos, y_pos, d_width, d_height):
     # black/white palette
     palette = displayio.Palette(2)
-    palette[0] = WHITE
-    palette[1] = BLACK
+    palette[0] = ui.white
+    palette[1] = ui.black
     # use hardware display width and height if -1, -1
     if d_width == -1 and d_height == -1:
         d_width = board.DISPLAY.width
@@ -99,9 +102,9 @@ def badgeQR(badge_data, badge):
     qr.make()
     qr_bitmap = bitmap_QR(qr.matrix)
     scale = min(board.DISPLAY.width // qr_bitmap.width, board.DISPLAY.height // qr_bitmap.height)
-    pos_x = (display.width - IMAGE_WIDTH) + int((display.width - (display.width - IMAGE_WIDTH)-qr_bitmap.width)/2)
-    pos_y = int((display.height-qr_bitmap.height)/2)
-    qr_img = displayio.TileGrid(qr_bitmap, pixel_shader=palette, x=pos_x, y=pos_y)
+    pos_x = (settings.hw.display.width - IMAGE_WIDTH) + int((settings.hw.display.width - (settings.hw.display.width - IMAGE_WIDTH)-qr_bitmap.width)/2)
+    pos_y = int((settings.hw.display.height-qr_bitmap.height)/2)
+    qr_img = displayio.TileGrid(qr_bitmap, pixel_shader=settings.hw.pallate, x=pos_x, y=pos_y)
     badge.append(qr_img)
 
 # get badge data from file
@@ -143,8 +146,8 @@ def show_badge(badgename, badge_data):
     global showqr
     COMPANY_HEIGHT = 40
     DETAILS_HEIGHT = 20
-    NAME_HEIGHT = HEIGHT - COMPANY_HEIGHT - (DETAILS_HEIGHT * 2) - 2
-    TEXT_WIDTH = WIDTH - IMAGE_WIDTH - 2
+    NAME_HEIGHT = settings.hw.height - COMPANY_HEIGHT - (DETAILS_HEIGHT * 2) - 2
+    TEXT_WIDTH = settings.hw.width - IMAGE_WIDTH - 2
     LEFT_PADDING = 5
     NAME_PADDING = 10
 
@@ -156,26 +159,26 @@ def show_badge(badgename, badge_data):
             badgebmppath = BADGES_DIR + badgename + '/' + badgename + '.bmp'
             image, palette = adafruit_imageload.load(badgebmppath, bitmap=displayio.Bitmap, palette=displayio.Palette)
         except:
-            image, palette = adafruit_imageload.load(IMAGES_DIR + 'user.bmp', bitmap = displayio.Bitmap, palette=displayio.Palette)
+            image, palette = adafruit_imageload.load(settings.path['images'][0] + 'user.bmp', bitmap = displayio.Bitmap, palette=displayio.Palette)
         photo_image = displayio.TileGrid(image, pixel_shader=palette)
-        photo_image.x, photo_image.y = display.width - IMAGE_WIDTH, 0 
+        photo_image.x, photo_image.y = settings.hw.width - IMAGE_WIDTH, 0
 
     # clear screen (black)
-    badge.append(Rect(0, 0, display.width+1, display.height, fill=BLACK, outline=BLACK))   #ID 
+    badge.append(Rect(0, 0, settings.hw.display+1, settings.hw.display.height, fill=ui.black, outline=ui.black))   #ID
     # Draw a border around the image
-    badge.append(Line(WIDTH - IMAGE_WIDTH, 0, WIDTH - 1, 0, WHITE))
-    badge.append(Line(WIDTH - IMAGE_WIDTH, 0, WIDTH - IMAGE_WIDTH, HEIGHT - 1, WHITE))
-    badge.append(Line(WIDTH - IMAGE_WIDTH, HEIGHT - 1, WIDTH - 1, HEIGHT - 1, WHITE))
-    badge.append(Line(WIDTH - 1, 0, WIDTH - 1, HEIGHT - 1, WHITE))
+    badge.append(Line(settings.hw.width - IMAGE_WIDTH, 0, settings.hw.width - 1, 0, ui.white))
+    badge.append(Line(settings.hw.width - IMAGE_WIDTH, 0, settings.hw.width - IMAGE_WIDTH, settings.hw.height - 1, ui.white))
+    badge.append(Line(settings.hw.width - IMAGE_WIDTH, settings.hw.height - 1, settings.hw.width - 1, settings.hw.height - 1, ui.white))
+    badge.append(Line(settings.hw.width - 1, 0, settings.hw.width - 1, settings.hw.height - 1, ui.white))
     # company name
-    ctxt=label.Label(font=badge_screen.fonts[1], text=badge_data['company'], color=WHITE, scale=1)
+    ctxt=label.Label(font=badge_screen.fonts[1], text=badge_data['company'], color=ui.white, scale=1)
     ctxt.x, ctxt.y = LEFT_PADDING, (COMPANY_HEIGHT // 2)
     badge.append(ctxt)
 
     # white background behind the name
-    badge.append(Rect(1, COMPANY_HEIGHT + 1, TEXT_WIDTH, NAME_HEIGHT, fill=WHITE, outline=WHITE))
+    badge.append(Rect(1, COMPANY_HEIGHT + 1, TEXT_WIDTH, NAME_HEIGHT, fill=ui.white, outline=ui.white))
     # name, scaling it based on the available width
-    fsize = 3 
+    fsize = 3
     name = badge_data['name']
     name_length = len(name) * (fsize * 12)
     if name_length >= (TEXT_WIDTH - NAME_PADDING):
@@ -183,31 +186,31 @@ def show_badge(badgename, badge_data):
         name_length = len(name) * (fsize * 6)
         if name_length >= (TEXT_WIDTH - NAME_PADDING):
             fsize = 1
-            name_length = len(name) * (fsize * 6)  
+            name_length = len(name) * (fsize * 6)
     name_length = len(name) * 18
-    ntxt = label.Label(font=badge_screen.fonts[1], text=name, color=BLACK, scale=1)
+    ntxt = label.Label(font=badge_screen.fonts[1], text=name, color=ui.black, scale=1)
     ntxt.x, ntxt.y = LEFT_PADDING, (NAME_HEIGHT // 2) + COMPANY_HEIGHT  # (TEXT_WIDTH - name_length) // 2
     badge.append(ntxt)
     # Draw a white backgrounds behind the details
-    badge.append(Rect(1, HEIGHT - DETAILS_HEIGHT * 2, TEXT_WIDTH, DETAILS_HEIGHT - 1, fill=WHITE, outline=WHITE))
-    badge.append(Rect(1, HEIGHT - DETAILS_HEIGHT, TEXT_WIDTH, DETAILS_HEIGHT - 1, fill=WHITE, outline=WHITE))
+    badge.append(Rect(1, settings.hw.height - DETAILS_HEIGHT * 2, TEXT_WIDTH, DETAILS_HEIGHT - 1, fill=ui.white, outline=ui.white))
+    badge.append(Rect(1, settings.hw.height - DETAILS_HEIGHT, TEXT_WIDTH, DETAILS_HEIGHT - 1, fill=ui.white, outline=ui.white))
     # Draw the first detail's title and text
     name_length = len(badge_data['detail1_title']) * 8
-    ntxt = label.Label(font=badge_screen.fonts[0], text=badge_data['detail1_title'], color=BLACK, scale=1)
-    ntxt.x, ntxt.y = LEFT_PADDING, HEIGHT - ((DETAILS_HEIGHT * 3) // 2) 
-    badge.append(ntxt)    
-    ntxt = label.Label(font=badge_screen.fonts[0], text=badge_data['detail1_text'], color=BLACK, scale=1)
-    #ntxt.x, ntxt.y = LEFT_PADDING + name_length + DETAIL_SPACING, HEIGHT - ((DETAILS_HEIGHT * 3) // 2)
-    ntxt.x, ntxt.y = 97, HEIGHT - ((DETAILS_HEIGHT * 3) // 2)
-    badge.append(ntxt)    
+    ntxt = label.Label(font=badge_screen.fonts[0], text=badge_data['detail1_title'], color=ui.black, scale=1)
+    ntxt.x, ntxt.y = LEFT_PADDING, settings.hw.height - ((DETAILS_HEIGHT * 3) // 2)
+    badge.append(ntxt)
+    ntxt = label.Label(font=badge_screen.fonts[0], text=badge_data['detail1_text'], color=ui.black, scale=1)
+    #ntxt.x, ntxt.y = LEFT_PADDING + name_length + DETAIL_SPACING, settings.hw.height - ((DETAILS_HEIGHT * 3) // 2)
+    ntxt.x, ntxt.y = 97, settings.hw.height - ((DETAILS_HEIGHT * 3) // 2)
+    badge.append(ntxt)
     # Draw the second detail's title and text
     name_length = len(badge_data['detail2_title']) * 8
-    ntxt = label.Label(font=badge_screen.fonts[0], text=badge_data['detail2_title'], color=BLACK, scale=1)
-    ntxt.x, ntxt.y = LEFT_PADDING, HEIGHT - (DETAILS_HEIGHT // 2)
-    badge.append(ntxt)      
-    ntxt=label.Label(font=badge_screen.fonts[0], text=badge_data['detail2_text'], color=BLACK, scale=1)
-    #ntxt.x, ntxt.y = LEFT_PADDING + name_length + DETAIL_SPACING, HEIGHT - (DETAILS_HEIGHT // 2)
-    ntxt.x, ntxt.y = 97, HEIGHT - (DETAILS_HEIGHT // 2)
+    ntxt = label.Label(font=badge_screen.fonts[0], text=badge_data['detail2_title'], color=ui.black, scale=1)
+    ntxt.x, ntxt.y = LEFT_PADDING, settings.hw.height - (DETAILS_HEIGHT // 2)
+    badge.append(ntxt)
+    ntxt=label.Label(font=badge_screen.fonts[0], text=badge_data['detail2_text'], color=ui.black, scale=1)
+    #ntxt.x, ntxt.y = LEFT_PADDING + name_length + DETAIL_SPACING, settings.hw.height - (DETAILS_HEIGHT // 2)
+    ntxt.x, ntxt.y = 97, settings.hw.height - (DETAILS_HEIGHT // 2)
     badge.append(ntxt)
     dismiss_badge = False
     while not dismiss_badge:      
@@ -219,8 +222,8 @@ def show_badge(badgename, badge_data):
             # show photo/image
             badge.append(photo_image)
         # display the completed badge
-        display.show(badge)
-        display.refresh()
+        settings.hw.display.show(badge)
+        settings.hw.display.refresh()
         # remove image for possible replacement
         badge.pop()
         # wait for keypress to dismiss or swap photo/QR code
@@ -296,15 +299,7 @@ showqr=False
 buttons = Buttons()
 buttons.set_led(True)  # led on during start-up
 
-# initialize display
-display = board.DISPLAY
-display.rotation = 270
-palette = displayio.Palette(1)
-palette[0] = WHITE
-palette_inverted = displayio.Palette(1)
-palette_inverted[0] = BLACK
-WIDTH = display.width
-HEIGHT = display.height
+# display image/QR Code size
 IMAGE_WIDTH = 104
 
 # create screen
@@ -314,7 +309,7 @@ badge_screen = Screen()
 badge_list = get_badge_list()
 
 # create the badge selection menu
-menu = Menu(display, badge_screen, buttons, badge_list, badge_screen.fonts[0], BADGES_DIR + 'badge' + '.bmp')
+menu = Menu(settings.hw.display, badge_screen, buttons, badge_list, badge_screen.fonts[0], BADGES_DIR + 'badge' + '.bmp')
 
 # main loop root 
 while True:
@@ -325,30 +320,3 @@ while True:
     elif ix < 5:
         # up, down
         page_select(-1 if ix == 3 else 1)
-
-
-
-#   B O N E Y A R D
-
-'''
-
-# add menu line to screen
-def update_screen_menuline():
-    global mainScreen
-    # save group count for removing items to allow clean paging
-    groupcount = len(mainScreen)
-    # create and add the new menu line
-    menu_line = create_menu_line(menu_page)
-    mainScreen.append(menu_line)
-    # display the screen
-    render_screen(mainScreen)
-    # after rendering, remove menu line items in preparation for paging
-    for i in range(groupcount, len(mainScreen)):
-        mainScreen.pop()
-
-
-    print('pos_x :' + str(pos_x))
-    print('pos_y :' + str(pos_y))
-
-
-'''

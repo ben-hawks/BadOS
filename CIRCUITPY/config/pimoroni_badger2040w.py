@@ -91,5 +91,7 @@ class HWConfig:
     self.palette[0] = c.ui.white
     self.palette_inverted = displayio.Palette(1)
     self.palette_inverted[0] = c.ui.black
+    self.width = self.display.width
+    self.height = self.display.height
 
 config = HWConfig()
