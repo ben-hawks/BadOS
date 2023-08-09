@@ -19,7 +19,7 @@ import pcf85063a
 # Enable or disable the SD Card, will not try to mount on startup if disabled
 # --- IMPORTANT NOTE! Failing to init the SD Card while inserted could result in issues, possibly SD card data loss. ---
 # --- Only disable if you KNOW you are not and will not be using an SD card! ---
-use_SD_card = False
+use_SD_card = True
 
 # Enable or disable SAOs in Circuitpython (the ports will always be powered, disabling simply doesn't create the objects
 use_SAO = True
@@ -74,23 +74,26 @@ settings.power_off = power_off
 settings.max_battery = 300
 settings.min_battery = 270
 
-
+settings.use_SD_card = use_SD_card
+settings.use_SAO = use_SAO
 # setup a path object to hold locations of apps, assets, etc.
 settings.path = {}
-
+#used for icons, images, fonts, etc.
+settings.asset_base_path = "/assets"
 #unified
-if use_SD_card:
-    settings.path.update({"apps":   ['/apps/','/sd/apps/']})
-    settings.path.update({"ducky":  ['/ducky/', '/sd/ducky/']})
-    settings.path.update({"icons":  ['/assets/icons/', '/sd/assets/icons/']})
-    settings.path.update({"images": ['/assets/images/', '/sd/assets/images/']})
-    settings.path.update({"fonts":  ['/assets/fonts/', '/sd/assets/fonts/']})
-else:
-    settings.path.update({"apps":   ['/apps/']})
-    settings.path.update({"ducky":  ['/ducky/']})
-    settings.path.update({"icons":  ['/assets/icons/']})
-    settings.path.update({"images": ['/assets/images/']})
-    settings.path.update({"fonts":  ['/assets/fonts/']})
+# if use_SD_card:
+#     settings.path.update({"apps":   ['/apps/','/sd/apps/']})
+#     settings.path.update({"ducky":  ['/ducky/', '/sd/ducky/']})
+#     settings.path.update({"icons":  ['/assets/icons/', '/sd/assets/icons/']})
+#     settings.path.update({"images": ['/assets/images/', '/sd/assets/images/']})
+#     settings.path.update({"fonts":  ['/assets/fonts/', '/sd/assets/fonts/']})
+# else:
+#     settings.path.update({"apps":   ['/apps/']})
+#     settings.path.update({"ducky":  ['/ducky/']})
+#     settings.path.update({"icons":  ['/assets/icons/']})
+#     settings.path.update({"images": ['/assets/images/']})
+#     settings.path.update({"fonts":  ['/assets/fonts/']})
+
 # --- pins ---
 
 pins.PIN_ALARM = board.SW_A                     # wakeup pin

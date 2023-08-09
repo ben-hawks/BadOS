@@ -116,8 +116,9 @@ class Screen:
         self.fonts.append(terminalio.FONT)
 
         if settings.hw.sd_mounted:
-            sd_fonts = [font for font in sorted(os.listdir(settings.path["fonts"][1])) if font[0:1] != "."]
 
+            found_fonts = [font for font in sorted(os.listdir(settings.path["fonts"][1])) if font[0:1] != "."]
+            self.fonts.append(found_fonts)
 class Status_Bar:
     
     def __init__(self, display):

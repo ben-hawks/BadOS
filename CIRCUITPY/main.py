@@ -99,6 +99,7 @@ buttons.set_led(True) # led on during start-up
 menu_page = 0
 app_list = get_app_list()
 #print(app_list)
+icon_path = settings.path["icons"][0]
 menu = Menu(settings.hw.display, screen, buttons, app_list, screen.fonts[0], settings.path["icons"][0] + 'file' + '.bmp')
 
 # main loop root 
