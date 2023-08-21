@@ -29,6 +29,9 @@ hw_impl = builtins.__import__(config_file, None, None, ["config"], 0)
 
 from configuration import settings, ui, pins
 
+settings.hw = hw_impl.config
+gc.collect()
+
 class Screen:
 
     def __init__(self, background_color = ui.white, with_status_bar = True):
@@ -36,11 +39,13 @@ class Screen:
         self.fonts = []
         self.get_fonts()
         
-        self.width = settings.hw.display.width
-        self.height = settings.hw.display.height
+        self.width = settings.hw.width
+        self.height = settings.hw.height
         self.background_color = background_color
         self.background_palette = settings.hw.palette_inverted if background_color == ui.black else settings.hw.palette
-        self.status_bar = Status_Bar(settings.hw.display)
+        #self.palette = settings.hw.palette if background_color == ui.black else settings.hw.palette_inverted
+        self.display = settings.hw.display
+        self.status_bar = Status_Bar(self.display)
         self.value = self.create_screen()
         self._status_bar_visible = with_status_bar
         if not with_status_bar:
@@ -116,7 +121,7 @@ class Screen:
         self.fonts.append(terminalio.FONT)
 
         if settings.hw.sd_mounted:
-
+            print(settings.path["fonts"][1])
             found_fonts = [font for font in sorted(os.listdir(settings.path["fonts"][1])) if font[0:1] != "."]
             self.fonts.append(found_fonts)
 class Status_Bar:
@@ -205,14 +210,14 @@ class Status_Bar:
     def value(self):
         # init and set black background
         bar = displayio.Group()
-        background = Rect(0, 0, self.display.width, 16, fill=ui.black, outline=ui.black)
+        background = Rect(0, 0, settings.hw.width, 16, fill=ui.black, outline=ui.black)
         # title
         title = label.Label(font=terminalio.FONT, text='AIV @ DC31', color=ui.white, scale=1)
         title.x, title.y = 3, 7
         # storage usage
         stg = self.create_storage_usage(85)
         # battery
-        battery = self.create_battery_level(self.display.width - 22 - 3, 3)
+        battery = self.create_battery_level(settings.hw.width - 22 - 3, 3)
         # country/language
         llang = label.Label(font=terminalio.FONT, text=self.settings.language.upper(), color=ui.white, scale=1)
         llang.x, llang.y = 202, 7

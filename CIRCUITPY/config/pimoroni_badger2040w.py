@@ -14,8 +14,6 @@ class HWConfig:
     """ constructor """
     #Try to setup and mount SD Card
     self.sd_mount_loc = '/sd'
-    self.vfs = None
-    self.sd_mounted = False
     self.sd_insert()
     self.format_populate_sd()
 
@@ -54,26 +52,17 @@ class HWConfig:
       SD_CS = pins.SD_CS
       # Connect to the card and mount the filesystem.
       spi = board.SPI()
-      self.sdcard = sdcardio.SDCard(spi, SD_CS)
-      self.vfs = storage.VfsFat(self.sdcard)
-      try: #Try unmounting and remounting sd card for when we come out of sleep. If we can't unmount, try mounting alone
-        #storage.umount(vfs)
-        storage.mount(self.vfs, mnt_loc)
-        print("Remounted SD Card on init! Probably coming out of sleep?")
-      except Exception as e:
-        #storage.mount(vfs, mnt_loc)
-        print("Freshly Mounted SD Card on init!")
+      sdcard = sdcardio.SDCard(spi, SD_CS)
+      vfs = storage.VfsFat(sdcard)
+      storage.mount(vfs, mnt_loc)
       return True
     except Exception as e:
       print("No SD Card Found or Failed to mount!")
       print(e)
       return False
 
-  def format_populate_sd(self, format=False):
+  def format_populate_sd(self):
     if self.sd_mounted:
-      if format:
-        self.vfs.mkfs(self.sdcard)
-      #print(settings.path.items())
       try:
         base_assets = self.sd_mount_loc + "/" + settings.asset_base_path
         os.mkdir(base_assets)
@@ -93,6 +82,7 @@ class HWConfig:
   def update_path_for_sd(self, use_SD):
     if use_SD:
       settings.path.update({"apps": ['/apps/', '/sd/apps/']})
+      settings.path.update({"badges": ['/apps/badge/', '/sd/badges/']})
       settings.path.update({"ducky": ['/ducky/', '/sd/ducky/']})
       settings.path.update({"icons": ['/assets/icons/', '/sd/assets/icons/']})
       settings.path.update({"images": ['/assets/images/', '/sd/assets/images/']})
@@ -100,6 +90,7 @@ class HWConfig:
       print("Setting path to include SD card")
     else:
       settings.path.update({"apps": ['/apps/']})
+      settings.path.update({"badges": ['/apps/badge/']})
       settings.path.update({"ducky": ['/ducky/']})
       settings.path.update({"icons": ['/assets/icons/']})
       settings.path.update({"images": ['/assets/images/']})

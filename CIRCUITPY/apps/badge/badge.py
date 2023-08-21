@@ -4,19 +4,16 @@
     David Guidos, May 2022
 '''
 
-import gc, os, sys, math, time, builtins
+import gc, os, time, builtins
+from os import listdir
+from time import sleep
+from gc import collect
+from builtins import __import__
 import board, microcontroller, storage, supervisor
 import analogio, digitalio, busio, displayio , terminalio , vectorio
-from digitalio import DigitalInOut, Direction, Pull
-from adafruit_bitmap_font import bitmap_font
 from adafruit_display_text import label
-from adafruit_display_shapes.circle import Circle
 from adafruit_display_shapes.line import Line
-from adafruit_display_shapes.polygon import Polygon
 from adafruit_display_shapes.rect import Rect
-from adafruit_display_shapes.roundrect import RoundRect
-from adafruit_display_shapes.triangle import Triangle
-from adafruit_hid.keyboard import Keyboard
 import adafruit_miniqr
 import adafruit_imageload
 
@@ -25,13 +22,12 @@ from BadOS_Screen import Screen, Status_Bar
 from BadOS_Menu import Menu
 
 config_file = "/config/" + board.board_id.replace(".", "_")
-hw_impl = builtins.__import__(config_file, None, None, ["config"], 0)
+hw_impl = __import__(config_file, None, None, ["config"], 0)
 
 from configuration import settings, ui, pins
 
-# constants
-ui.white = 0xFFFFFF
-ui.black = 0x000000
+settings.hw = hw_impl.config
+collect()
 BADGES_DIR = '/apps/badge/'
 
 
@@ -79,6 +75,7 @@ def show_qr_bitmap(qr_bitmap, x_pos, y_pos, d_width, d_height):
 # create QR bitmap from code matrix
 def bitmap_QR(matrix):
     # monochome (2 color) palette
+
     BORDER_PIXELS = 2
     # bitmap the size of the screen, monochrome (2 colors)
     bitmap = displayio.Bitmap(matrix.width + 2 * BORDER_PIXELS, matrix.height + 2 * BORDER_PIXELS, 2)
@@ -94,6 +91,7 @@ def bitmap_QR(matrix):
 # create QR for contact vcard using the badge data
 # to replace photo in badge
 def badgeQR(badge_data, badge):
+    collect()
     # create vcard string from badge data
     vcard_text = vcard(badge_data)
     # create QR code for the vcard string
@@ -101,10 +99,11 @@ def badgeQR(badge_data, badge):
     qr.add_data(vcard_text.encode('ascii'))
     qr.make()
     qr_bitmap = bitmap_QR(qr.matrix)
-    scale = min(board.DISPLAY.width // qr_bitmap.width, board.DISPLAY.height // qr_bitmap.height)
-    pos_x = (settings.hw.display.width - IMAGE_WIDTH) + int((settings.hw.display.width - (settings.hw.display.width - IMAGE_WIDTH)-qr_bitmap.width)/2)
-    pos_y = int((settings.hw.display.height-qr_bitmap.height)/2)
-    qr_img = displayio.TileGrid(qr_bitmap, pixel_shader=settings.hw.pallate, x=pos_x, y=pos_y)
+    #scale = min(board.DISPLAY.width // qr_bitmap.width, board.DISPLAY.height // qr_bitmap.height)
+    collect()
+    pos_x = (settings.hw.width - IMAGE_WIDTH) + int((settings.hw.width - (settings.hw.width - IMAGE_WIDTH)-qr_bitmap.width)/2)
+    pos_y = int((settings.hw.height-qr_bitmap.height)/2)
+    qr_img = displayio.TileGrid(qr_bitmap, pixel_shader=qr_palette, x=pos_x, y=pos_y)
     badge.append(qr_img)
 
 # get badge data from file
@@ -142,76 +141,71 @@ def vcard(badge_data):
     return vcard
 
 # create and display the badge
-def show_badge(badgename, badge_data):
+def show_badge(badgename, badge_data, badge_image_path):
     global showqr
     COMPANY_HEIGHT = 40
     DETAILS_HEIGHT = 20
     NAME_HEIGHT = settings.hw.height - COMPANY_HEIGHT - (DETAILS_HEIGHT * 2) - 2
     TEXT_WIDTH = settings.hw.width - IMAGE_WIDTH - 2
     LEFT_PADDING = 5
-    NAME_PADDING = 10
+    #NAME_PADDING = 10
 
     # create group for the badge
     badge = displayio.Group()
 
     if showqr == False:
         try:
-            badgebmppath = BADGES_DIR + badgename + '/' + badgename + '.bmp'
-            image, palette = adafruit_imageload.load(badgebmppath, bitmap=displayio.Bitmap, palette=displayio.Palette)
-        except:
+            #image, palette = adafruit_imageload.load(badge_image_path, bitmap=displayio.Bitmap, palette=displayio.Palette)
+            image = displayio.OnDiskBitmap(badge_image_path)
+            palette = image.pixel_shader
+        except Exception as e:
+            print(e)
             image, palette = adafruit_imageload.load(settings.path['images'][0] + 'user.bmp', bitmap = displayio.Bitmap, palette=displayio.Palette)
         photo_image = displayio.TileGrid(image, pixel_shader=palette)
         photo_image.x, photo_image.y = settings.hw.width - IMAGE_WIDTH, 0
 
     # clear screen (black)
-    badge.append(Rect(0, 0, settings.hw.display+1, settings.hw.display.height, fill=ui.black, outline=ui.black))   #ID
+    badge.append(Rect(0, 0, settings.hw.width+1, settings.hw.height, fill=ui.black, outline=ui.black))   #ID
     # Draw a border around the image
     badge.append(Line(settings.hw.width - IMAGE_WIDTH, 0, settings.hw.width - 1, 0, ui.white))
     badge.append(Line(settings.hw.width - IMAGE_WIDTH, 0, settings.hw.width - IMAGE_WIDTH, settings.hw.height - 1, ui.white))
     badge.append(Line(settings.hw.width - IMAGE_WIDTH, settings.hw.height - 1, settings.hw.width - 1, settings.hw.height - 1, ui.white))
     badge.append(Line(settings.hw.width - 1, 0, settings.hw.width - 1, settings.hw.height - 1, ui.white))
     # company name
-    ctxt=label.Label(font=badge_screen.fonts[1], text=badge_data['company'], color=ui.white, scale=1)
-    ctxt.x, ctxt.y = LEFT_PADDING, (COMPANY_HEIGHT // 2)
-    badge.append(ctxt)
+    ntxt= label.Label(font=badge_screen.fonts[1], text=badge_data['company'], color=ui.white, scale=1)
+    ntxt.x, ntxt.y = LEFT_PADDING, (COMPANY_HEIGHT // 2)
+    badge.append(ntxt)
 
     # white background behind the name
     badge.append(Rect(1, COMPANY_HEIGHT + 1, TEXT_WIDTH, NAME_HEIGHT, fill=ui.white, outline=ui.white))
-    # name, scaling it based on the available width
-    fsize = 3
-    name = badge_data['name']
-    name_length = len(name) * (fsize * 12)
-    if name_length >= (TEXT_WIDTH - NAME_PADDING):
-        fsize = 2
-        name_length = len(name) * (fsize * 6)
-        if name_length >= (TEXT_WIDTH - NAME_PADDING):
-            fsize = 1
-            name_length = len(name) * (fsize * 6)
-    name_length = len(name) * 18
-    ntxt = label.Label(font=badge_screen.fonts[1], text=name, color=ui.black, scale=1)
+
+    ntxt = label.Label(font=badge_screen.fonts[1], text=badge_data['name'], color=ui.black, scale=1)
     ntxt.x, ntxt.y = LEFT_PADDING, (NAME_HEIGHT // 2) + COMPANY_HEIGHT  # (TEXT_WIDTH - name_length) // 2
     badge.append(ntxt)
+
     # Draw a white backgrounds behind the details
     badge.append(Rect(1, settings.hw.height - DETAILS_HEIGHT * 2, TEXT_WIDTH, DETAILS_HEIGHT - 1, fill=ui.white, outline=ui.white))
     badge.append(Rect(1, settings.hw.height - DETAILS_HEIGHT, TEXT_WIDTH, DETAILS_HEIGHT - 1, fill=ui.white, outline=ui.white))
+
     # Draw the first detail's title and text
-    name_length = len(badge_data['detail1_title']) * 8
     ntxt = label.Label(font=badge_screen.fonts[0], text=badge_data['detail1_title'], color=ui.black, scale=1)
     ntxt.x, ntxt.y = LEFT_PADDING, settings.hw.height - ((DETAILS_HEIGHT * 3) // 2)
     badge.append(ntxt)
     ntxt = label.Label(font=badge_screen.fonts[0], text=badge_data['detail1_text'], color=ui.black, scale=1)
-    #ntxt.x, ntxt.y = LEFT_PADDING + name_length + DETAIL_SPACING, settings.hw.height - ((DETAILS_HEIGHT * 3) // 2)
     ntxt.x, ntxt.y = 97, settings.hw.height - ((DETAILS_HEIGHT * 3) // 2)
     badge.append(ntxt)
+
     # Draw the second detail's title and text
-    name_length = len(badge_data['detail2_title']) * 8
     ntxt = label.Label(font=badge_screen.fonts[0], text=badge_data['detail2_title'], color=ui.black, scale=1)
     ntxt.x, ntxt.y = LEFT_PADDING, settings.hw.height - (DETAILS_HEIGHT // 2)
     badge.append(ntxt)
     ntxt=label.Label(font=badge_screen.fonts[0], text=badge_data['detail2_text'], color=ui.black, scale=1)
-    #ntxt.x, ntxt.y = LEFT_PADDING + name_length + DETAIL_SPACING, settings.hw.height - (DETAILS_HEIGHT // 2)
+
     ntxt.x, ntxt.y = 97, settings.hw.height - (DETAILS_HEIGHT // 2)
     badge.append(ntxt)
+    del ntxt
+    collect()
+
     dismiss_badge = False
     while not dismiss_badge:      
         # draw badge image
@@ -232,7 +226,7 @@ def show_badge(badgename, badge_data):
         buttons.set_led(True)
         # wait for button release
         while buttons.states_index() != -1:
-            time.sleep(0.05)
+            sleep(0.05)
         # perform button click
         if button_index == 4:
             # down arrow pressed
@@ -252,15 +246,13 @@ def show_badge(badgename, badge_data):
 def get_badge_list():
     badge_list = []
     # get badge names from badge directories; names and icon bitmaps
-    ListFiles = os.listdir(BADGES_DIR)
-    for badgename in ListFiles:
-        #d = os.path.join(rootdir, app)
-        #if os.path.isdir(d):
-        if "." not in badgename:
-            badge_list.append((badgename, BADGES_DIR + badgename + '/' + badgename + '.bmp'))
+    for i in settings.path["badges"]:
+        badge_list += [[badge, i + badge + '/' + badge + '.bmp', i + badge + '/' + badge + '.txt'] for badge in listdir(i) if "." not in badge]
     badge_list.sort()
     # add selection for exit
-    badge_list.append(('exit', '/assets/icons/exit.bmp'))
+    print(badge_list)
+    badge_list.append(['exit', '/assets/icons/exit.bmp', ''])
+
     return badge_list
 
 # menu selection handler
@@ -276,12 +268,12 @@ def menu_select(n):
             # return to the main menu
             supervisor.reload()
         else:
-            badgedatapath = BADGES_DIR + badgename + '/' + badgename + '.txt'
-            badgedata = get_badge_data(badgedatapath)
-            show_badge(badgename, badgedata)
+            collect()
+            show_badge(badgename, get_badge_data(badge_list[ix][2]), badge_list[ix][1])
 
 # page selecton handler
 def page_select(p):
+    collect()
     global menu_page
     menu_page += p
     if menu_page < 0: menu_page = 0    # TODO: rotate back to last page ?
@@ -302,15 +294,18 @@ buttons.set_led(True)  # led on during start-up
 # display image/QR Code size
 IMAGE_WIDTH = 104
 
+qr_palette = displayio.Palette(1)
+qr_palette[0] = ui.white
+
 # create screen
 badge_screen = Screen()
-
+collect()
 # get list of badges for menu
 badge_list = get_badge_list()
-
+collect()
 # create the badge selection menu
 menu = Menu(settings.hw.display, badge_screen, buttons, badge_list, badge_screen.fonts[0], BADGES_DIR + 'badge' + '.bmp')
-
+collect()
 # main loop root 
 while True:
     ix = menu.show_menu(menu_page)

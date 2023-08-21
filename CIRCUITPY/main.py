@@ -8,18 +8,6 @@ import gc, os, sys, math, time, builtins
 import board, microcontroller, storage, supervisor
 import analogio, digitalio, busio, displayio , terminalio , vectorio, usb_hid, simpleio
 from digitalio import DigitalInOut, Direction, Pull
-from adafruit_bitmap_font import bitmap_font
-from adafruit_display_text import label
-from adafruit_display_shapes.circle import Circle
-from adafruit_display_shapes.line import Line
-from adafruit_display_shapes.polygon import Polygon
-from adafruit_display_shapes.rect import Rect
-from adafruit_display_shapes.roundrect import RoundRect
-from adafruit_display_shapes.triangle import Triangle
-#from adafruit_hid.keyboard import Keyboard
-import adafruit_miniqr
-import adafruit_ducky
-import adafruit_imageload
 
 from BadOS_Screen import Screen
 from BadOS_Buttons import Buttons
@@ -32,9 +20,10 @@ import configuration
 config_file = "/config/" + board.board_id.replace(".", "_")
 hw_impl = builtins.__import__(config_file, None, None, ["config"], 0)
 
-from configuration import settings, ui, pins
+from configuration import settings, ui
 
 settings.hw = hw_impl.config
+gc.collect()
 
 # constants
 WHITE = ui.bg_color
@@ -57,7 +46,7 @@ def get_app_list():
     for i in settings.path["apps"]:
         app_list += [[app, i + app + '/' + app + '.bmp', i + app + '/' + app + '.py'] for app in os.listdir(i) if app[0:1] != "."]
     app_list.sort()
-    print(app_list)
+    #print(app_list)
     return app_list 
 
 # menu selection handler
@@ -101,6 +90,7 @@ app_list = get_app_list()
 #print(app_list)
 icon_path = settings.path["icons"][0]
 menu = Menu(settings.hw.display, screen, buttons, app_list, screen.fonts[0], settings.path["icons"][0] + 'file' + '.bmp')
+gc.collect()
 
 # main loop root 
 while True:

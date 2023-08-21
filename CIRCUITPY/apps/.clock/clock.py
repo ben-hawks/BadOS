@@ -4,14 +4,22 @@
 	David Guidos, April 2022
 '''
 
-import time
-import board, microcontroller, storage, supervisor
-import terminalio, vectorio
+import time, builtins
+import board, microcontroller, storage, supervisor, gc
+import terminalio, vectorio, displayio
 from adafruit_bitmap_font import bitmap_font
 from adafruit_display_text import label
 from adafruit_display_shapes.rect import Rect
 from BadOS_Screen import Screen
 from BadOS_Buttons import Buttons
+
+config_file = "/config/" + board.board_id.replace(".", "_")
+hw_impl = builtins.__import__(config_file, None, None, ["config"], 0)
+
+from configuration import settings, ui, pins
+
+settings.hw = hw_impl.config
+gc.collect()
 
 # constants
 WHITE = 0xFFFFFF
@@ -55,7 +63,7 @@ def get_current_time(hour_delta, min_delta, sec_delta):
 
 # initialize display
 scr = Screen()
-white_background = vectorio.Rectangle(pixel_shader=scr.palette, width=scr.display.width+1, height=scr.display.height, x=0, y=0)
+white_background = vectorio.Rectangle(pixel_shader=displayio.Palette, width=scr.display.width+1, height=scr.display.height, x=0, y=0)
 title = label.Label(font=terminalio.FONT, text='Clock', color=BLACK, scale=2)
 title.x, title.y = 60, 20
 scr.value.append(white_background)

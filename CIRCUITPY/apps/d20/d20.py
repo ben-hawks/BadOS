@@ -118,7 +118,7 @@ scr = Screen(background_color = WHITE, with_status_bar = False)
 # select a random number and draw the die
 game_over = False
 while not game_over:
-    buttons.led.value = 1  # turn on activity LED
+    buttons.set_led(False) # turn off activity LED
     # select random number
     rn = random.randint(1, 20)
     print(f'Random d20 selection is {rn}')
@@ -130,10 +130,10 @@ while not game_over:
     scr.value.pop()
     # loop until timeout or button clicked
     end_requested = False
-    buttons.led.value = 0  # turn off activity LED
+    buttons.set_led(False) # turn off activity LED
     start_time = time.monotonic()
     while not end_requested:
-        bsi = buttons.states_index()
+        bsi = buttons.await_click()["idx"]
         if bsi == 3 or bsi == 4 or time.monotonic() > start_time + 60:
             # up or down clicked, or timeout
             end_requested = True
@@ -145,32 +145,5 @@ while not game_over:
         time.sleep(0.05)
 
 # return to the system menu
-buttons.led.value = 1  # turn on LED
+buttons.set_led(True)
 supervisor.reload()
-
-
-
-#   b o n e y a r d
-
-'''
-
-# determine the angles of each face starting with
-# the selected number.
-# eliminate any triangles with any vertex beyond 
-# 90 degrees at the edge.
-# remap all points within each active triangle.
-# icosahedron dihedral angle = 138.19°
-
-# print selected number (n) and touching triangles
-n = 20	
-print(n, d20[n])
-for i in range(3):
-	print(int(d20[n][i][0:-1]), d20[int(d20[n][i][0:-1])])
-
-    # create image
-    #width, height = 400, 400
-    #d20_img = Image.new( mode = "RGB", size = (width, height))    #img = ImageDraw.Draw(d20_img)
-	#img.polygon((t(p0), t(p1), t(p2)), outline=(255,255,255))
-
-
-'''

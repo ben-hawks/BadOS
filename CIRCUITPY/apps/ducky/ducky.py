@@ -97,10 +97,10 @@ def menu_select(n, item_list):
     ix = menu_page * 3 + n
     if ix < len(item_list):
         item = item_list[ix][0]
-        if item == 'exit':
+        if item == 'EXIT':
             # exit requested
             # turn on activity LED
-            buttons.LED = 1
+            buttons.set_led(True)
             # return to the main menu
             supervisor.reload()
         else:
