@@ -71,10 +71,11 @@ class HWConfig:
       for path_val in settings.path.items():
         sd_path_loc = path_val[1][1] #create paths for only SD card, default paths should always exist...
         try:
-          #print(sd_path_loc)
+          print(sd_path_loc)
           os.mkdir(sd_path_loc)
         except OSError as e:
-          #print("File Exists! no need to create")
+          print("File Exists! no need to create")
+          print(e)
           pass
 
 

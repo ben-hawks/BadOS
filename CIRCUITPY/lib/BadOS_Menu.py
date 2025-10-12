@@ -78,7 +78,8 @@ class Menu:
 
     # render the screen
     def render_screen(self):
-        self.display.show(self.screen.value)
+        self.display.root_group = self.screen.value
+        # self.display.show(self.screen.value)
         while self.display.busy==True:
             time.sleep(0.01)     
         self.display.refresh()   
