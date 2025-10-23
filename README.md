@@ -1,4 +1,7 @@
 # BadOS
+
+## This is a forked and reworked version of the original BadOS, still very much a work in progress :)
+
 ## *Badge Operating System for Pimoroni Badger2040 Electronic Badge Using CircuitPython*
 
 ![BadOS](https://github.com/GuidosLabs/BadOS/blob/main/CIRCUITPY/assets/images/BadOS-120.bmp)
