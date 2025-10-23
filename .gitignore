@@ -91,3 +91,26 @@ TAGS
 
 # Uncrustify formatting
 *.uncrustify
+/CIRCUITPY/bados_buttons_shim.py
+/CIRCUITPY/menu_introspect.py
+/CIRCUITPY/sd_try_mount.py
+/CIRCUITPY/sw_read.py
+/CIRCUITPY/sd_mount_with_pins_cs.py
+/CIRCUITPY/ntp_diagnostic.py
+/CIRCUITPY/sd_diag.py
+/CIRCUITPY/old_main.py
+/CIRCUITPY/test_bados.py
+/CIRCUITPY/release_display_and_try_mount.py
+/CIRCUITPY/menu_render_test.py
+/CIRCUITPY/test_icon_loading.py
+/CIRCUITPY/test_state_preservation.py
+/CIRCUITPY/test_ntp_direct.py
+/CIRCUITPY/test_power_system.py
+/CIRCUITPY/test_ntp_sync.py
+/CIRCUITPY/test_ntp_library.py
+/CIRCUITPY/test_wakeup.py
+/CIRCUITPY/test_final.py
+/CIRCUITPY/install_ntp_library.md
+/CIRCUITPY/main.py
+/CIRCUITPY/test_filesystem.py
+/CIRCUITPY/display_smoke.py
